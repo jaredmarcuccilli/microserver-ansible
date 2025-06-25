@@ -1,0 +1,89 @@
+version: 2
+
+global:
+  all:
+    cache-dir: /mnt/restic-cache
+  backup:
+    one-file-system: true
+
+locations:
+  home:
+    from: /home
+    to: microserver-restic-home
+    cron: '0 3 * * SAT' # At 3am on Saturday
+    forget: prune
+    options:
+      forget:
+        keep-last: 3
+
+  opt-docker:
+    from: /opt/docker
+    to: microserver-restic-opt-docker
+    cron: '0 * * * *' # Hourly
+    forget: prune
+    options:
+      forget:
+        keep-hourly: 72
+        keep-daily: 7
+        keep-weekly: 4
+        keep-monthly: 12
+
+  var-lib-docker:
+    from: /var/lib/docker
+    to: microserver-restic-var-lib-docker
+    cron: '0 * * * *' # Hourly
+    forget: prune
+    options:
+      forget:
+        keep-hourly: 72
+        keep-daily: 7
+        keep-weekly: 4
+        keep-monthly: 12
+    hooks:
+      success:
+        - 'curl -m 10 --retry 5 -X POST -H "Content-Type: text/plain" --data "Backup successful for location: ${AUTORESTIC_LOCATION}" {{ AUTORESTIC_microserver_restic_var_lib_docker_curl }}'
+
+  immich:
+    from: /mnt/immich
+    to: microserver-restic-immich
+    cron: '0 * * * *' # Hourly
+    forget: prune
+    options:
+      forget:
+        keep-hourly: 72
+        keep-daily: 7
+        keep-weekly: 4
+        keep-monthly: 12
+
+backends:
+  microserver-restic-home:
+    type: s3
+    path: '{{ AUTORESTIC_microserver_restic_home_path }}'
+    key: '{{ AUTORESTIC_microserver_restic_home_key }}'
+    env:
+      AWS_ACCESS_KEY_ID: '{{ AUTORESTIC_microserver_restic_home_key_id }}'
+      AWS_SECRET_ACCESS_KEY: '{{ AUTORESTIC_microserver_restic_home_access_key }}'
+
+  microserver-restic-opt-docker:
+    type: s3
+    path: '{{ AUTORESTIC_microserver_restic_opt_docker_path }}'
+    key: '{{ AUTORESTIC_microserver_restic_opt_docker_key }}'
+    env:
+      AWS_ACCESS_KEY_ID: '{{ AUTORESTIC_microserver_restic_opt_docker_key_id }}'
+      AWS_SECRET_ACCESS_KEY: '{{ AUTORESTIC_microserver_restic_opt_docker_access_key }}'
+
+  microserver-restic-var-lib-docker:
+    type: s3
+    path: '{{ AUTORESTIC_microserver_restic_var_lib_docker_path }}'
+    key: '{{ AUTORESTIC_microserver_restic_var_lib_docker_key }}
+    env:
+      AWS_ACCESS_KEY_ID: '{{ AUTORESTIC_microserver_restic_var_lib_docker_key_id }}'
+      AWS_SECRET_ACCESS_KEY: '{{ AUTORESTIC_microserver_restic_var_lib_docker_access_key }}'
+
+  microserver-restic-immich:
+    type: s3
+    path: '{{ AUTORESTIC_microserver_restic_immich_path }}'
+    key: '{{ AUTORESTIC_microserver_restic_immich_key }}'
+    env:
+      AWS_ACCESS_KEY_ID: '{{ AUTORESTIC_microserver_restic_immich_key_id }}'
+      AWS_SECRET_ACCESS_KEY: '{{ AUTORESTIC_microserver_restic_immich_access_key }}'

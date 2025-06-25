@@ -1,0 +1,220 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Install packages
+      community.general.apk:
+        name:
+          - util-linux
+          - htop
+          - doas
+          - doas-sudo-shim
+          - docker
+          - docker-compose
+          - samba
+          - zfs
+          - zfs-lts
+          - alloy
+          - gcompat
+          - bash-completion
+        state: present
+        update_cache: true
+
+    - name: Install packages from edge/testing
+      community.general.apk:
+        name:
+          - cloudflared
+          - autorestic
+        state: present
+        update_cache: true
+        repository: https://dl-cdn.alpinelinux.org/alpine/edge/testing
+
+    - name: Install packages from edge/community
+      community.general.apk:
+        name:
+          - alloy
+        state: present
+        update_cache: true
+        repository: https://dl-cdn.alpinelinux.org/alpine/edge/community
+
+    - name: Add group
+      ansible.builtin.group:
+        name: jaredm
+        gid: 2001
+
+    - name: Add user
+      ansible.builtin.user:
+        name: jaredm
+        comment: Jared R. Marcuccilli
+        shell: /bin/bash
+        uid: 2001
+        group: jaredm
+        groups: wheel, docker
+
+    - name: Add group
+      ansible.builtin.group:
+        name: davidp
+        gid: 2002
+
+    - name: Add user
+      ansible.builtin.user:
+        name: davidp
+        comment: David J. Price
+        shell: /bin/bash
+        uid: 2002
+        group: davidp
+
+    - name: Add ssh key
+      ansible.posix.authorized_key:
+        user: jaredm
+        key: https://github.com/jaredmarcuccilli.keys
+
+    - name: Add ssh key
+      ansible.posix.authorized_key:
+        user: davidp
+        key: https://github.com/davidprice25.keys
+
+    - name: Install Samba configuration
+      ansible.builtin.template:
+        src: templates/smb.conf.j2
+        dest: /etc/samba/smb.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Samba
+
+    - name: Install Grafana Alloy configuration
+      ansible.builtin.template:
+        src: templates/config.alloy.j2
+        dest: /etc/alloy/config.alloy
+        owner: root
+        group: root
+        mode: '0600'
+      notify: Restart Grafana Alloy
+
+    - name: Install Grafana Alloy service file
+      ansible.builtin.copy:
+        src: files/alloy
+        dest: /etc/init.d/alloy
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install ZFS scrub script
+      ansible.builtin.copy:
+        src: files/scrub
+        dest: /etc/periodic/monthly/scrub
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Install motd script
+      ansible.builtin.copy:
+        src: files/motd
+        dest: /etc/periodic/15min/motd
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Install custom bash profile options
+      ansible.builtin.copy:
+        src: files/99-custom.sh
+        dest: /etc/profile.d/99-custom.sh
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install autorestic script
+      ansible.builtin.copy:
+          src: files/autorestic
+          dest: /etc/periodic/15min/autorestic
+          owner: root
+          group: root
+          mode: '0744'
+
+    - name: Install autorestic config
+      ansible.builtin.template:
+        src: templates/.autorestic.yml.j2
+        dest: /etc/.autorestic.yml
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Add Cloudflare SSH CA certificate
+      ansible.builtin.copy:
+          src: files/ca.pub
+          dest: /etc/ssh/ca.pub
+          owner: root
+          group: root
+          mode: '0644'
+
+    - name: Add hardening SSHD configuration
+      ansible.builtin.template:
+        src: templates/00-hardening.conf.j2
+        dest: /etc/ssh/sshd_config.d/00-hardening.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart SSHD
+
+    - name: Add VS Code SSHD configuration
+      ansible.builtin.template:
+        src: templates/01-vscode.conf.j2
+        dest: /etc/ssh/sshd_config.d/01-vscode.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart SSHD
+
+    - name: Add Cloudflare SSHD configuration
+      ansible.builtin.template:
+        src: templates/02-cloudflare.conf.j2
+        dest: /etc/ssh/sshd_config.d/02-cloudflare.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart SSHD
+
+    - name: Allow wheel group to use sudo without password
+      ansible.builtin.template:
+        src: templates/doas.conf.j2
+        dest: /etc/doas.d/doas.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start and enable multiple services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - alloy
+        - cloudflared
+        - docker
+        - samba
+
+  handlers:
+    - name: Restart Samba
+      ansible.builtin.service:
+        name: samba
+        state: restarted
+        enabled: true
+
+    - name: Restart Grafana Alloy
+      ansible.builtin.service:
+        name: alloy
+        state: restarted
+        enabled: true
+
+    - name: Restart SSHD
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+        enabled: true
+
+    - name: Restart cloudflared
+      ansible.builtin.service:
+        name: cloudflared
+        state: restarted
+        enabled: true
