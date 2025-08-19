@@ -1,2 +1,2 @@
 #!/bin/sh -eu
-/usr/bin/autorestic -c /etc/.autorestic.yml --ci cron
+/usr/bin/autorestic -c /etc/.autorestic.yml --ci cron 2>&1 | /usr/bin/logger -t autorestic

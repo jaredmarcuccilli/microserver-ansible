@@ -13,10 +13,11 @@
           - docker-compose
           - samba
           - zfs
-          - zfs-lts
+          - zfs-auto-snapshot
           - alloy
           - gcompat
           - bash-completion
+          - mlocate
         state: present
         update_cache: true
 
