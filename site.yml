@@ -6,6 +6,7 @@
       community.general.apk:
         name:
           - util-linux
+          - curl
           - htop
           - doas
           - doas-sudo-shim
@@ -13,11 +14,14 @@
           - docker-compose
           - samba
           - zfs
-          - zfs-auto-snapshot
           - alloy
           - gcompat
           - bash-completion
           - mlocate
+          - restic
+          - git
+          - mandoc
+          - docs
         state: present
         update_cache: true
 
@@ -51,6 +55,7 @@
         uid: 2001
         group: jaredm
         groups: wheel, docker
+        password: '*'
 
     - name: Add group
       ansible.builtin.group:
@@ -64,6 +69,7 @@
         shell: /bin/bash
         uid: 2002
         group: davidp
+        password: '*'
 
     - name: Add ssh key
       ansible.posix.authorized_key:
@@ -104,7 +110,15 @@
     - name: Install ZFS scrub script
       ansible.builtin.copy:
         src: files/scrub
-        dest: /etc/periodic/monthly/scrub
+        dest: /usr/libexec/zfs/scrub
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Install ZFS trim script
+      ansible.builtin.copy:
+        src: files/trim
+        dest: /usr/libexec/zfs/trim
         owner: root
         group: root
         mode: '0744'
@@ -194,6 +208,7 @@
         - cloudflared
         - docker
         - samba
+        - crond
 
   handlers:
     - name: Restart Samba
