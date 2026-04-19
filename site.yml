@@ -8,8 +8,6 @@
           - util-linux
           - curl
           - htop
-          - doas
-          - doas-sudo-shim
           - docker
           - docker-compose
           - samba
@@ -22,6 +20,7 @@
           - git
           - mandoc
           - docs
+          - github-cli
         state: present
         update_cache: true
 
@@ -38,6 +37,7 @@
       community.general.apk:
         name:
           - alloy
+          - sudo
         state: present
         update_cache: true
         repository: https://dl-cdn.alpinelinux.org/alpine/edge/community
@@ -46,6 +46,11 @@
       ansible.builtin.group:
         name: jaredm
         gid: 2001
+
+    - name: Set root user shell to /bin/bash
+      ansible.builtin.user:
+        name: root
+        shell: /bin/bash
 
     - name: Add user
       ansible.builtin.user:
@@ -134,7 +139,7 @@
     - name: Install custom bash profile options
       ansible.builtin.copy:
         src: files/99-custom.sh
-        dest: /etc/profile.d/99-custom.sh
+        dest: /etc/bash/99-custom.sh
         owner: root
         group: root
         mode: '0644'

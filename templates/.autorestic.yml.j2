@@ -15,6 +15,11 @@ locations:
     options:
       forget:
         keep-last: 3
+      backup:
+        exclude:
+          - '*.vbm'
+          - '*.vbk'
+          - '*.vib'
     hooks:
       success:
         - 'curl -m 10 --retry 5 -X POST -H "Content-Type: text/plain" --data "Backup successful for location: ${AUTORESTIC_LOCATION}" {{ AUTORESTIC_microserver_restic_home_curl }}'
